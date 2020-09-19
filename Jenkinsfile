@@ -1,0 +1,118 @@
+pipeline {
+
+    agent any
+
+    environment {
+        registry = "amandavkar/devops"
+        registryCredential = 'dockerhub'
+        dockerImage = ''
+        githubRepo = "https://github.com/amandavkar/devops.git"
+    }
+
+    tools {
+        maven "Maven"
+    }
+
+    stages {
+        stage("Get Branches from Git Remote") {
+            steps {
+                script {
+                     cleanWs()
+                     sh """
+                        mkdir git_check
+                        cd git_check
+                        git clone $githubRepo .
+                        git branch -a | grep remotes > ${WORKSPACE}/branchesList.txt
+                        sed "s/  remotes\\/origin\\///g" ${WORKSPACE}/branchesList.txt > ${WORKSPACE}/branches.txt
+                        cd ..
+                        rm -r git_check
+                     """
+                }
+            }
+        }
+
+        stage('User Input') {
+           steps {
+               script {
+                  listBranchesAvailable = readFile 'branches.txt'
+                  env.branchToBuild = timeout (time:1, unit:"HOURS") {
+                     input message: 'Branch to build', ok: 'Confirm!',
+                             parameters: [choice(name: 'Branches:', choices: "${listBranchesAvailable }", description: 'Which branch do you want to build?')]
+                  }
+
+                  env.buildOptions = timeout (time:1, unit:"HOURS") {
+                      input message: 'Build a  ', ok: 'Confirm!',
+                         parameters: [choice(name: 'Deploy to Artifactory:', choices: ['snapshot', 'release'], description: 'Build options...')]
+                  }
+
+                  env.deployOption = timeout (time:1, unit:"HOURS") {
+                      input message: 'Deploy Release ? ', ok: 'Confirm!',
+                         parameters: [choice(name: 'Deploy release:', choices: ['No', 'Yes'], description: 'Deploy the release...')]
+                  }
+                  sh "rm branches.txt"
+               }
+           }
+        }
+
+        stage("Clone git repo") {
+          steps {
+            git branch: "${branchToBuild}", url: 'https://github.com/amandavkar/devops.git'
+          }
+        }
+
+        stage('Build jar file') {
+	      steps {
+            sh "mvn -Dmaven.test.failure.ignore=true -DskipTests=true clean package"
+	      }
+        }
+
+        stage('Move artifacts to Artifactory') {
+           steps {
+               script {
+                  if (env.buildOptions == 'snapshot') {
+                     script {
+                        sh "mvn -Dmaven.test.failure.ignore=true -DskipTests=true deploy"
+                     }
+                  }
+
+                  if (env.buildOptions == 'release') {
+                     script {
+                        sh "mvn -B release:clean release:prepare release:perform"
+                     }
+                  }
+               }
+           }
+        }
+
+        stage ('Deploy to container') {
+           steps {
+               script {
+                  if (env.deployOption == 'Yes') {
+                     script {
+                         dockerImage = docker.build registry + ":$BUILD_NUMBER"
+                         sh "docker run -d -p 8888:8888 $registry:$BUILD_NUMBER"
+                     }
+                  }
+               }
+            }
+        }
+
+//        stage('Push Docker image') {
+//          steps {
+//              script {
+//                  docker.withRegistry( '', registryCredential ) {
+//                       dockerImage.push()
+//                       dockerImage.push("latest")
+//                  }
+//              }
+//          }
+//        }
+
+//        stage('Remove local Docker image') {
+//          steps {
+//                  sh "docker rmi $registry:$BUILD_NUMBER"
+//          }
+//        }
+
+    }
+}

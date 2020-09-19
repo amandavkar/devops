@@ -1,0 +1,92 @@
+pipeline {
+
+    agent any
+
+    environment {
+      registry = "amandavkar/devops"
+      registryCredential = 'dockerhub'
+      remoteHost = "vagrant@192.168.11.10"
+      githubRepo = "https://github.com/amandavkar/devops.git"
+    }
+
+    tools {
+       maven "Maven"
+    }
+
+    stages {
+        stage("Get tags from Git Remote") {
+            steps {
+                script {
+                     cleanWs()
+                     sh """
+                        mkdir git_check
+                        cd git_check
+                        git clone $githubRepo .
+                        git tag > ${WORKSPACE}/tagList.txt
+                        cd ..
+                        rm -r git_check
+                     """
+                }
+            }
+        }
+
+        stage('User Input - tag list') {
+           steps {
+               script {
+                  listTagsAvailable = readFile 'tagList.txt'
+                  env.tagToBuild = timeout (time:1, unit:"HOURS") {
+                     input message: 'Tag to build', ok: 'Confirm!',
+                             parameters: [choice(name: 'Tags:', choices: "${listTagsAvailable }", description: 'Which tag do you want to build?')]
+                  }
+                  sh "rm tagList.txt"
+               }
+           }
+        }
+
+        stage("Clone git repo") {
+          steps {
+            script {
+                sh """
+                  echo "tag to build is -${tagToBuild}-"
+                  git clone $githubRepo .
+                  git checkout ${tagToBuild}
+                """
+            }
+          }
+        }
+
+	    stage('Build jar file') {
+	      steps {
+            sh "mvn -Dmaven.test.failure.ignore=true -DskipTests=true clean package"
+	      }
+        }
+
+        stage('Build Docker image and tar file') {
+           steps {
+              script {
+                  sh """#!/bin/bash
+                     docker build -t $registry:$BUILD_NUMBER .
+                     docker save -o qa-app.tar $registry:$BUILD_NUMBER
+                     docker images | grep '$registry' | awk \'{print \$3}\' | xargs docker rmi -f
+                  """
+              }
+           }
+        }
+
+        stage('Move the image to QA environment') {
+          steps {
+             script {
+                 sh "scp qa-app.tar $remoteHost:/home/vagrant/qa-app.tar"
+                 sh """
+                    ssh -tt $remoteHost << EOF
+                      docker load -i qa-app.tar
+                      rm qa-app.jar
+                      docker run -d -p 8888:8888 $registry:$BUILD_NUMBER
+                      exit
+                    EOF
+                 """
+             }
+          }
+        }
+    }
+}
