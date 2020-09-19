@@ -1,0 +1,98 @@
+pipeline {
+   agent any
+    environment {
+        registry = "amandavkar/devops"
+        registryCredential = 'dockerhub'
+        githubRepo = "https://github.com/amandavkar/devops.git"
+        remoteHost = "vagrant@192.168.11.11"
+    }
+
+    tools {
+        maven "Maven"
+    }
+
+    stages {
+        stage("Get tags from Git Remote") {
+            steps {
+                script {
+                     cleanWs()
+                     sh """
+                        mkdir git_check
+                        cd git_check
+                        git clone $githubRepo .
+                        git tag > ${WORKSPACE}/tagList.txt
+                        cd ..
+                        rm -r git_check
+                     """
+                }
+            }
+        }
+
+        stage('User Input - tag list') {
+           steps {
+               script {
+                  listTagsAvailable = readFile 'tagList.txt'
+                  env.tagToBuild = timeout (time:1, unit:"HOURS") {
+                     input message: 'Tag to build', ok: 'Confirm!',
+                             parameters: [choice(name: 'Tags:', choices: "${listTagsAvailable }", description: 'Which tag do you want to build?')]
+                  }
+                  sh "rm tagList.txt"
+               }
+           }
+        }
+
+        stage("Clone git repo") {
+          steps {
+            script {
+                sh """
+                  echo "tag to build is -${tagToBuild}-"
+                  git clone $githubRepo .
+                  ls
+                  git checkout ${tagToBuild}
+                """
+            }
+          }
+        }
+
+        stage('Download jar file from artifactory') {
+           steps {
+               script {
+                   buildTag = """${sh(
+                                returnStdout: true,
+                                script: 'echo "${tagToBuild}" | sed "s/v//g"'
+                              ).trim()}"""
+                   sh "wget --user admin --password admin123 http://192.168.0.107:8081/artifactory/libs-release-local/com/example/devops/${buildTag}/devops-${buildTag}.jar"
+               }
+           }
+        }
+
+        stage('Build Docker tar file') {
+           steps {
+              script {
+                  sh """#!/bin/bash
+                     docker build -t $registry:$BUILD_NUMBER -f DockerfileForProd .
+                     docker save -o prodapp.tar $registry:$BUILD_NUMBER
+                     docker images | grep '$registry' | awk \'{print \$3}\' | xargs docker rmi -f
+                  """
+              }
+           }
+        }
+
+        stage('Move the image to Prod environment and run') {
+          steps {
+             script {
+                 sh "scp prodapp.tar $remoteHost:/home/vagrant"
+                 sh """
+                    ssh -tt $remoteHost << EOF
+                    docker load -i prodapp.tar
+                    rm prodapp.tar
+                    docker run -d -p 8888:8888 $registry:$BUILD_NUMBER
+                    exit
+                    EOF
+                 """
+             }
+          }
+        }
+
+    }
+}
