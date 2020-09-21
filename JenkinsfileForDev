@@ -89,8 +89,11 @@ pipeline {
                script {
                   if (env.deployOption == 'Yes') {
                      script {
-                         dockerImage = docker.build registry + ":$BUILD_NUMBER"
-                         sh "docker run -d -p 8888:8888 $registry:$BUILD_NUMBER"
+                         sh """
+                            cp ./target/*.jar .
+                            docker build -t $registry:$BUILD_NUMBER .
+                            docker run -d -p 8888:8888 -e "SPRING_PROFILES_ACTIVE=dev" $registry:$BUILD_NUMBER
+                         """
                      }
                   }
                }

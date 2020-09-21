@@ -65,6 +65,7 @@ pipeline {
            steps {
               script {
                   sh """#!/bin/bash
+                     cp ./target/*.jar .
                      docker build -t $registry:$BUILD_NUMBER .
                      docker save -o qa-app.tar $registry:$BUILD_NUMBER
                      docker images | grep '$registry' | awk \'{print \$3}\' | xargs docker rmi -f
@@ -81,7 +82,7 @@ pipeline {
                     ssh -tt $remoteHost << EOF
                       docker load -i qa-app.tar
                       rm qa-app.jar
-                      docker run -d -p 8888:8888 $registry:$BUILD_NUMBER
+                      docker run -d -p 8888:8888 -e "SPRING_PROFILES_ACTIVE=qa" $registry:$BUILD_NUMBER
                       exit
                     EOF
                  """
