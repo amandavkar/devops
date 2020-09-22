@@ -84,6 +84,11 @@ pipeline {
            }
         }
 
+//        while using docker commands, we will have to use kubernetes in order for log files
+//        to be built as defined in the loging.xml in the application. For this demo purpose,
+//        since we are not using kubernetes, -e "SPRING_PROFILES_ACTIVE=qa" option is not used
+//        with docker run command
+
         stage ('Deploy to container') {
            steps {
                script {
@@ -92,7 +97,7 @@ pipeline {
                          sh """
                             cp ./target/*.jar .
                             docker build -t $registry:$BUILD_NUMBER .
-                            docker run -d -p 8888:8888 -e "SPRING_PROFILES_ACTIVE=dev" $registry:$BUILD_NUMBER
+                            docker run -d -p 8888:8888 $registry:$BUILD_NUMBER
                          """
                      }
                   }

@@ -3,7 +3,7 @@
 
     <springProfile name="dev">
         <property scope="context" name="log.fileExtension" value="log"></property>
-        <property scope="context" name="log.directory" value="E:/Atul/Microservices-Handson/devops/logs"></property>
+        <property scope="context" name="log.directory" value="./mylogs"></property>
         <property scope="context" name="log.fileName" value="bootiful-elk-dev"></property>
 
         <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
@@ -38,7 +38,7 @@
 
     <springProfile name="qa">
         <property scope="context" name="log.fileExtension" value="log"></property>
-        <property scope="context" name="log.directory" value="E:/Atul/Microservices-Handson/devops/logs"></property>
+        <property scope="context" name="log.directory" value="./mylogs"></property>
         <property scope="context" name="log.fileName" value="bootiful-elk-qa"></property>
 
         <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
@@ -64,7 +64,7 @@
 
     <springProfile name="prod">
         <property scope="context" name="log.fileExtension" value="log"></property>
-        <property scope="context" name="log.directory" value="E:/Atul/Microservices-Handson/devops/logs"></property>
+        <property scope="context" name="log.directory" value="./mylogs"></property>
         <property scope="context" name="log.fileName" value="bootiful-elk-prod"></property>
 
         <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
