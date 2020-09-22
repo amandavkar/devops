@@ -92,7 +92,8 @@ pipeline {
                          sh """
                             cp ./target/*.jar .
                             docker build -t $registry:$BUILD_NUMBER .
-                            docker run -d -p 8888:8888 -e "SPRING_PROFILES_ACTIVE=dev" $registry:$BUILD_NUMBER
+//                            docker run -d -p 8888:8888 -e "SPRING_PROFILES_ACTIVE=dev" $registry:$BUILD_NUMBER
+                            docker run --entrypoint java -d $registry:$BUILD_NUMBER -Dspring.profiles.active=dev -jar *.jar
                          """
                      }
                   }
