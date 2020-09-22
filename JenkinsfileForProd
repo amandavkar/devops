@@ -61,7 +61,7 @@ pipeline {
                                 returnStdout: true,
                                 script: 'echo "${tagToBuild}" | sed "s/v//g"'
                               ).trim()}"""
-                   sh "wget --user admin --password admin123 http://192.168.0.107:8081/artifactory/libs-release-local/com/example/devops/${buildTag}/devops-${buildTag}.jar"
+                   sh "wget --user admin --password admin123 http://192.168.0.106:8081/artifactory/libs-release-local/com/example/devops/${buildTag}/devops-${buildTag}.jar"
                }
            }
         }
