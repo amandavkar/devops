@@ -9,7 +9,7 @@
     </parent>
     <groupId>com.example</groupId>
     <artifactId>devops</artifactId>
-    <version>1.0.4-SNAPSHOT</version>
+    <version>1.0.5-SNAPSHOT</version>
     <name>devops</name>
     <description>Demo project for Spring Boot</description>
 
@@ -25,12 +25,12 @@
         <repository>
             <id>release</id>
             <name>releases</name>
-            <url>http://192.168.0.107:8081/artifactory/libs-release-local</url>
+            <url>http://192.168.0.106:8081/artifactory/libs-release-local</url>
         </repository>
         <snapshotRepository>
             <id>snapshot</id>
             <name>snapshots</name>
-            <url>http://192.168.0.107:8081/artifactory/libs-snapshot-local</url>
+            <url>http://192.168.0.106:8081/artifactory/libs-snapshot-local</url>
         </snapshotRepository>
     </distributionManagement>
 
@@ -56,6 +56,19 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- this is for getting the logs directly to logstash insead thru a file
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>6.3</version>
+        </dependency>
+        -->
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
             <optional>true</optional>
         </dependency>
@@ -70,6 +83,12 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+        </dependency>
+
     </dependencies>
 
     <build>

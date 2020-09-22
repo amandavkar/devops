@@ -61,7 +61,7 @@ pipeline {
                                 returnStdout: true,
                                 script: 'echo "${tagToBuild}" | sed "s/v//g"'
                               ).trim()}"""
-                   sh "wget --user admin --password admin123 http://192.168.0.107:8081/artifactory/libs-release-local/com/example/devops/${buildTag}/devops-${buildTag}.jar"
+                   sh "wget --user admin --password admin123 http://192.168.0.106:8081/artifactory/libs-release-local/com/example/devops/${buildTag}/devops-${buildTag}.jar"
                }
            }
         }
@@ -70,22 +70,27 @@ pipeline {
            steps {
               script {
                   sh """#!/bin/bash
-                     docker build -t $registry:$BUILD_NUMBER -f DockerfileForProd .
-                     docker save -o prodapp.tar $registry:$BUILD_NUMBER
+                     docker build -t $registry:$BUILD_NUMBER .
+                     docker save -o prod-app.tar $registry:$BUILD_NUMBER
                      docker images | grep '$registry' | awk \'{print \$3}\' | xargs docker rmi -f
                   """
               }
            }
         }
 
+//        while using docker commands, we will have to use kubernetes in order for log files
+//        to be built as defined in the loging.xml in the application. For this demo purpose,
+//        since we are not using kubernetes, -e "SPRING_PROFILES_ACTIVE=qa" option is not used
+//        with docker run command
+
         stage('Move the image to Prod environment and run') {
           steps {
              script {
-                 sh "scp prodapp.tar $remoteHost:/home/vagrant"
+                 sh "scp prod-app.tar $remoteHost:/home/vagrant"
                  sh """
                     ssh -tt $remoteHost << EOF
-                    docker load -i prodapp.tar
-                    rm prodapp.tar
+                    docker load -i prod-app.tar
+                    rm prod-app.tar
                     docker run -d -p 8888:8888 $registry:$BUILD_NUMBER
                     exit
                     EOF

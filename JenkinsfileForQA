@@ -61,20 +61,26 @@ pipeline {
 	      }
         }
 
+//        while using docker commands, we will have to use kubernetes in order for log files
+//        to be built as defined in the loging.xml in the application. For this demo purpose,
+//        since we are not using kubernetes, -e "SPRING_PROFILES_ACTIVE=qa" option is not used
+//        with docker run command
+
         stage('Build Docker image and tar file') {
            steps {
               script {
                   sh """#!/bin/bash
+                     cp ./target/*.jar .
                      docker build -t $registry:$BUILD_NUMBER .
                      docker save -o qa-app.tar $registry:$BUILD_NUMBER
                      docker images | grep '$registry' | awk \'{print \$3}\' | xargs docker rmi -f
                   """
               }
            }
-        }
+       }
 
         stage('Move the image to QA environment') {
-          steps {
+        steps {
              script {
                  sh "scp qa-app.tar $remoteHost:/home/vagrant/qa-app.tar"
                  sh """
